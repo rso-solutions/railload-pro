@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RailLoad Pro — Loading Console</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d1117;--bg2:#161b22;--bg3:#21262d;--border:#30363d;
+  --text:#e6edf3;--muted:#8b949e;--accent:#58a6ff;--green:#3fb950;
+  --amber:#d29922;--red:#f85149;
+  --font:'Barlow',sans-serif;--mono:'IBM Plex Mono',monospace;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;min-height:100vh}
+.shell{display:grid;grid-template-columns:220px 1fr;min-height:100vh}
+.sidebar{background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:0}
+.sidebar-top{padding:16px;border-bottom:1px solid var(--border)}
+.logo{font-size:13px;font-weight:600;color:var(--text);letter-spacing:.04em;font-family:var(--mono)}
+.logo span{color:var(--accent)}
+.site-tag{font-size:11px;color:var(--muted);margin-top:3px;font-family:var(--mono)}
+.nav{padding:12px 8px;flex:1}
+.nav-label{font-size:10px;color:var(--muted);letter-spacing:.08em;font-family:var(--mono);padding:4px 8px 8px;text-transform:uppercase}
+.nav-item{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:6px;font-size:13px;color:var(--muted);cursor:pointer;margin-bottom:2px}
+.nav-item.active{background:rgba(88,166,255,.1);color:var(--accent)}
+.main{display:flex;flex-direction:column}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--border);background:var(--bg2)}
+.topbar-left{display:flex;align-items:center;gap:12px}
+.page-title{font-size:15px;font-weight:600}
+.badge-live{background:rgba(63,185,80,.15);color:var(--green);font-size:10px;font-weight:500;font-family:var(--mono);padding:3px 8px;border-radius:4px;border:1px solid rgba(63,185,80,.3)}
+.clk{font-size:12px;color:var(--muted);font-family:var(--mono)}
+.content{padding:20px;display:flex;flex-direction:column;gap:16px}
+.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:14px 16px}
+.stat-label{font-size:11px;color:var(--muted);font-family:var(--mono);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em}
+.stat-val{font-size:22px;font-weight:600;font-family:var(--mono);line-height:1}
+.stat-sub{font-size:11px;color:var(--muted);margin-top:4px}
+.stat-sub.ok{color:var(--green)}
+.stat-sub.warn{color:var(--amber)}
+.panel{background:var(--bg2);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.panel-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border)}
+.panel-title{font-size:13px;font-weight:500;font-family:var(--mono)}
+.tbl{width:100%;border-collapse:collapse;font-size:12px}
+.tbl th{font-size:10px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:.06em;padding:8px 16px;border-bottom:1px solid var(--border);text-align:left;font-weight:400}
+.tbl td{padding:10px 16px;border-bottom:1px solid var(--border);font-family:var(--mono)}
+.tbl tr:last-child td{border-bottom:none}
+.tag{display:inline-block;font-size:10px;font-family:var(--mono);padding:2px 7px;border-radius:4px;font-weight:500}
+.tag-ok{background:rgba(63,185,80,.15);color:var(--green);border:1px solid rgba(63,185,80,.25)}
+.tag-warn{background:rgba(210,153,34,.15);color:var(--amber);border:1px solid rgba(210,153,34,.25)}
+.tag-over{background:rgba(248,81,73,.15);color:var(--red);border:1px solid rgba(248,81,73,.25)}
+.empty{padding:24px 16px;text-align:center;color:var(--muted);font-size:13px;font-family:var(--mono)}
+.export-btn{background:var(--bg3);border:1px solid var(--border);color:var(--muted);font-size:11px;font-family:var(--mono);padding:5px 12px;border-radius:4px;cursor:pointer}
+.export-btn:hover{color:var(--text);border-color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="sidebar">
+    <div class="sidebar-top">
+      <div class="logo">Rail<span>Load</span> Pro</div>
+      <div class="site-tag" id="site-tag">RSO Solutions</div>
+    </div>
+    <div class="nav">
+      <div class="nav-label">Monitor</div>
+      <div class="nav-item active">Dashboard</div>
+      <div class="nav-item" onclick="exportCSV()">Export CSV</div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="page-title">Loading console</div>
+        <div class="badge-live">LIVE</div>
+      </div>
+      <div class="clk" id="clock"></div>
+    </div>
+
+    <div class="content">
+      <div class="stat-row">
+        <div class="stat-card">
+          <div class="stat-label">Today's cars</div>
+          <div class="stat-val" id="stat-cars">—</div>
+          <div class="stat-sub" id="stat-cars-sub">Loading...</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total loaded today</div>
+          <div class="stat-val" id="stat-total">—</div>
+          <div class="stat-sub" id="stat-total-sub">tonnes</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total lifts today</div>
+          <div class="stat-val" id="stat-lifts">—</div>
+          <div class="stat-sub" id="stat-lifts-sub">across all cars</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Overload alerts</div>
+          <div class="stat-val" id="stat-alerts" style="color:var(--amber)">—</div>
+          <div class="stat-sub warn" id="stat-alerts-sub">checking...</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">Today's completed cars</span>
+          <button class="export-btn" onclick="exportCSV()">Export CSV</button>
+        </div>
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th>Car ID</th>
+              <th>Operator</th>
+              <th>Lifts</th>
+              <th>Total (kg)</th>
+              <th>Target (kg)</th>
+              <th>Max (kg)</th>
+              <th>Status</th>
+              <th>Finished</th>
+            </tr>
+          </thead>
+          <tbody id="sessions-body">
+            <tr><td colspan="8" class="empty">Loading sessions...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">All sessions — history</span>
+        </div>
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th>Car ID</th>
+              <th>Operator</th>
+              <th>Lifts</th>
+              <th>Total (kg)</th>
+              <th>Target (kg)</th>
+              <th>Status</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody id="history-body">
+            <tr><td colspan="7" class="empty">Loading history...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = '';
+
+function tick(){
+  const now = new Date();
+  document.getElementById('clock').textContent =
+    now.toLocaleDateString('en-CA') + '  ' + now.toTimeString().slice(0,8);
+}
+tick();
+setInterval(tick, 1000);
+
+function statusTag(session){
+  const pct = session.total_kg / session.max_kg * 100;
+  if(pct > 100) return '<span class="tag tag-over">OVERLOAD</span>';
+  if(pct > 95)  return '<span class="tag tag-warn">NEAR LIMIT</span>';
+  return '<span class="tag tag-ok">OK</span>';
+}
+
+function fmt(num){ return num ? Number(num).toLocaleString() : '—'; }
+
+function fmtDate(ts){
+  if(!ts) return '—';
+  const d = new Date(ts);
+  return d.toLocaleDateString('en-CA') + ' ' + d.toTimeString().slice(0,5);
+}
+
+async function loadToday(){
+  try {
+    const res = await fetch(API + '/api/sessions/today');
+    const data = await res.json();
+    const sessions = data.sessions || [];
+
+    document.getElementById('stat-cars').textContent = sessions.length;
+    document.getElementById('stat-cars-sub').textContent = sessions.length === 1 ? '1 car today' : sessions.length + ' cars today';
+
+    const totalKg = sessions.reduce((a,s) => a + parseFloat(s.total_kg||0), 0);
+    document.getElementById('stat-total').textContent = (totalKg/1000).toFixed(1);
+
+    const totalLifts = sessions.reduce((a,s) => a + parseInt(s.lift_count||0), 0);
+    document.getElementById('stat-lifts').textContent = totalLifts;
+
+    const alerts = sessions.filter(s => parseFloat(s.total_kg) > parseFloat(s.max_kg)).length;
+    document.getElementById('stat-alerts').textContent = alerts;
+    document.getElementById('stat-alerts-sub').textContent = alerts === 0 ? 'None today' : alerts + ' overload(s)';
+
+    const tbody = document.getElementById('sessions-body');
+    if(sessions.length === 0){
+      tbody.innerHTML = '<tr><td colspan="8" class="empty">No sessions today yet</td></tr>';
+    } else {
+      tbody.innerHTML = sessions.map(s => `
+        <tr>
+          <td>${s.car_id}</td>
+          <td>${s.operator||'—'}</td>
+          <td>${s.lift_count||0}</td>
+          <td>${fmt(s.total_kg)}</td>
+          <td>${fmt(s.target_kg)}</td>
+          <td>${fmt(s.max_kg)}</td>
+          <td>${statusTag(s)}</td>
+          <td>${fmtDate(s.finished_at)}</td>
+        </tr>`).join('');
+    }
+  } catch(e){
+    document.getElementById('sessions-body').innerHTML =
+      '<tr><td colspan="8" class="empty">Error loading sessions</td></tr>';
+  }
+}
+
+async function loadHistory(){
+  try {
+    const res = await fetch(API + '/api/sessions');
+    const data = await res.json();
+    const sessions = data.sessions || [];
+    const tbody = document.getElementById('history-body');
+    if(sessions.length === 0){
+      tbody.innerHTML = '<tr><td colspan="7" class="empty">No sessions recorded yet</td></tr>';
+    } else {
+      tbody.innerHTML = sessions.map(s => `
+        <tr>
+          <td>${s.car_id}</td>
+          <td>${s.operator||'—'}</td>
+          <td>${s.lift_count||0}</td>
+          <td>${fmt(s.total_kg)}</td>
+          <td>${fmt(s.target_kg)}</td>
+          <td>${statusTag(s)}</td>
+          <td>${fmtDate(s.finished_at)}</td>
+        </tr>`).join('');
+    }
+  } catch(e){
+    document.getElementById('history-body').innerHTML =
+      '<tr><td colspan="7" class="empty">Error loading history</td></tr>';
+  }
+}
+
+function exportCSV(){
+  fetch(API + '/api/sessions')
+    .then(r => r.json())
+    .then(data => {
+      const sessions = data.sessions || [];
+      const rows = [
+        ['Date','Car ID','Operator','Lifts','Total kg','Target kg','Max kg','Status','Finished']
+      ];
+      sessions.forEach(s => {
+        const pct = s.total_kg / s.max_kg * 100;
+        const status = pct > 100 ? 'OVERLOAD' : pct > 95 ? 'NEAR LIMIT' : 'OK';
+        rows.push([
+          fmtDate(s.finished_at), s.car_id, s.operator||'',
+          s.lift_count||0, s.total_kg||0, s.target_kg||0,
+          s.max_kg||0, status, fmtDate(s.finished_at)
+        ]);
+      });
+      const csv = rows.map(r => r.join(',')).join('\n');
+      const blob = new Blob([csv], {type:'text/csv'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'railload-pro-' + new Date().toISOString().slice(0,10) + '.csv';
+      a.click();
+    });
+}
+
+loadToday();
+loadHistory();
+setInterval(() => { loadToday(); loadHistory(); }, 30000);
+</script>
+</body>
+</html>

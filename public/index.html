@@ -39,12 +39,34 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
 .stat-sub.ok{color:var(--green)}
 .stat-sub.warn{color:var(--amber)}
 .panel{background:var(--bg2);border:1px solid var(--border);border-radius:8px;overflow:hidden}
-.panel-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border)}
+.panel-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px}
 .panel-title{font-size:13px;font-weight:500;font-family:var(--mono)}
+.search-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.search-input{background:var(--bg3);border:1px solid var(--border);color:var(--text);font-size:11px;font-family:var(--mono);padding:5px 10px;border-radius:4px;width:160px}
+.search-input:focus{outline:none;border-color:var(--accent)}
+.search-input::placeholder{color:var(--muted)}
+.date-input{background:var(--bg3);border:1px solid var(--border);color:var(--text);font-size:11px;font-family:var(--mono);padding:5px 10px;border-radius:4px;width:130px}
+.date-input:focus{outline:none;border-color:var(--accent)}
+.search-btn{background:var(--accent);border:none;color:#0d1117;font-size:11px;font-family:var(--mono);font-weight:500;padding:5px 12px;border-radius:4px;cursor:pointer}
+.search-btn:hover{opacity:.85}
+.clear-btn{background:var(--bg3);border:1px solid var(--border);color:var(--muted);font-size:11px;font-family:var(--mono);padding:5px 10px;border-radius:4px;cursor:pointer}
+.clear-btn:hover{color:var(--text)}
 .tbl{width:100%;border-collapse:collapse;font-size:12px}
 .tbl th{font-size:10px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:.06em;padding:8px 16px;border-bottom:1px solid var(--border);text-align:left;font-weight:400}
 .tbl td{padding:10px 16px;border-bottom:1px solid var(--border);font-family:var(--mono)}
 .tbl tr:last-child td{border-bottom:none}
+.session-row{cursor:pointer;transition:background .15s}
+.session-row:hover{background:rgba(88,166,255,.05)}
+.session-row.expanded{background:rgba(88,166,255,.05)}
+.expand-icon{color:var(--muted);font-size:10px;transition:transform .2s;display:inline-block}
+.expand-icon.open{transform:rotate(90deg)}
+.lift-row-container{display:none;background:var(--bg3)}
+.lift-row-container.open{display:table-row-group}
+.lift-tbl{width:100%;border-collapse:collapse;font-size:11px}
+.lift-tbl th{font-size:9px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:.06em;padding:6px 24px 6px 40px;border-bottom:1px solid var(--border);text-align:left;font-weight:400;background:var(--bg3)}
+.lift-tbl td{padding:7px 24px 7px 40px;border-bottom:1px solid rgba(48,54,61,.5);font-family:var(--mono);color:var(--muted)}
+.lift-tbl tr:last-child td{border-bottom:none}
+.lift-loading{padding:12px 40px;font-size:11px;color:var(--muted);font-family:var(--mono)}
 .tag{display:inline-block;font-size:10px;font-family:var(--mono);padding:2px 7px;border-radius:4px;font-weight:500}
 .tag-ok{background:rgba(63,185,80,.15);color:var(--green);border:1px solid rgba(63,185,80,.25)}
 .tag-warn{background:rgba(210,153,34,.15);color:var(--amber);border:1px solid rgba(210,153,34,.25)}
@@ -52,6 +74,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
 .empty{padding:24px 16px;text-align:center;color:var(--muted);font-size:13px;font-family:var(--mono)}
 .export-btn{background:var(--bg3);border:1px solid var(--border);color:var(--muted);font-size:11px;font-family:var(--mono);padding:5px 12px;border-radius:4px;cursor:pointer}
 .export-btn:hover{color:var(--text);border-color:var(--accent)}
+.results-count{font-size:11px;color:var(--muted);font-family:var(--mono);padding:6px 16px;border-bottom:1px solid var(--border);background:var(--bg3)}
 </style>
 </head>
 <body>
@@ -59,7 +82,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
   <div class="sidebar">
     <div class="sidebar-top">
       <div class="logo">Rail<span>Load</span> Pro</div>
-      <div class="site-tag" id="site-tag">RSO Solutions</div>
+      <div class="site-tag">RSO Solutions</div>
     </div>
     <div class="nav">
       <div class="nav-label">Monitor</div>
@@ -87,12 +110,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
         <div class="stat-card">
           <div class="stat-label">Total loaded today</div>
           <div class="stat-val" id="stat-total">—</div>
-          <div class="stat-sub" id="stat-total-sub">tonnes</div>
+          <div class="stat-sub">tonnes</div>
         </div>
         <div class="stat-card">
           <div class="stat-label">Total lifts today</div>
           <div class="stat-val" id="stat-lifts">—</div>
-          <div class="stat-sub" id="stat-lifts-sub">across all cars</div>
+          <div class="stat-sub">across all cars</div>
         </div>
         <div class="stat-card">
           <div class="stat-label">Overload alerts</div>
@@ -109,6 +132,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
         <table class="tbl">
           <thead>
             <tr>
+              <th style="width:24px"></th>
               <th>Car ID</th>
               <th>Operator</th>
               <th>Lifts</th>
@@ -120,18 +144,28 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
             </tr>
           </thead>
           <tbody id="sessions-body">
-            <tr><td colspan="8" class="empty">Loading sessions...</td></tr>
+            <tr><td colspan="9" class="empty">Loading sessions...</td></tr>
           </tbody>
         </table>
       </div>
 
       <div class="panel">
         <div class="panel-head">
-          <span class="panel-title">All sessions — history</span>
+          <span class="panel-title">Search — session history</span>
+          <div class="search-bar">
+            <input class="search-input" id="search-car" placeholder="Car ID..." type="text">
+            <input class="date-input" id="search-from" type="date">
+            <input class="date-input" id="search-to" type="date">
+            <button class="search-btn" onclick="runSearch()">Search</button>
+            <button class="clear-btn" onclick="clearSearch()">Clear</button>
+            <button class="export-btn" onclick="exportCSV()">Export CSV</button>
+          </div>
         </div>
+        <div class="results-count" id="results-count" style="display:none"></div>
         <table class="tbl">
           <thead>
             <tr>
+              <th style="width:24px"></th>
               <th>Car ID</th>
               <th>Operator</th>
               <th>Lifts</th>
@@ -142,7 +176,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
             </tr>
           </thead>
           <tbody id="history-body">
-            <tr><td colspan="7" class="empty">Loading history...</td></tr>
+            <tr><td colspan="8" class="empty">Loading history...</td></tr>
           </tbody>
         </table>
       </div>
@@ -176,6 +210,79 @@ function fmtDate(ts){
   return d.toLocaleDateString('en-CA') + ' ' + d.toTimeString().slice(0,5);
 }
 
+function fmtTime(ts){
+  if(!ts) return '—';
+  return new Date(ts).toTimeString().slice(0,8);
+}
+
+async function loadLifts(carId, tbodyId){
+  const tbody = document.getElementById(tbodyId);
+  tbody.innerHTML = '<tr><td colspan="4" class="lift-loading">Loading lifts...</td></tr>';
+  try {
+    const res = await fetch(API + '/api/lifts/' + encodeURIComponent(carId));
+    const data = await res.json();
+    const lifts = data.lifts || [];
+    if(lifts.length === 0){
+      tbody.innerHTML = '<tr><td colspan="4" class="lift-loading">No lift records found</td></tr>';
+    } else {
+      tbody.innerHTML = `
+        <tr>
+          <th>#</th><th>Time</th><th>Weight (kg)</th><th>Transaction ID</th>
+        </tr>` +
+        lifts.map(l => `
+        <tr>
+          <td>${l.lift_number||'—'}</td>
+          <td>${fmtTime(l.captured_at)}</td>
+          <td>${fmt(l.weight_kg)}</td>
+          <td style="color:var(--muted);font-size:10px">${l.transaction_id}</td>
+        </tr>`).join('');
+    }
+  } catch(e){
+    tbody.innerHTML = '<tr><td colspan="4" class="lift-loading">Error loading lifts</td></tr>';
+  }
+}
+
+function toggleRow(sessionId, carId, tbodyId){
+  const liftContainer = document.getElementById('lifts-' + sessionId);
+  const icon = document.getElementById('icon-' + sessionId);
+  const row = document.getElementById('row-' + sessionId);
+  const isOpen = liftContainer.classList.contains('open');
+  if(isOpen){
+    liftContainer.classList.remove('open');
+    icon.classList.remove('open');
+    row.classList.remove('expanded');
+  } else {
+    liftContainer.classList.add('open');
+    icon.classList.add('open');
+    row.classList.add('expanded');
+    loadLifts(carId, tbodyId);
+  }
+}
+
+function sessionRow(s, colspan){
+  const uid = s.id + '-' + Math.random().toString(36).slice(2,8);
+  const liftsTbodyId = 'lifts-tbody-' + uid;
+  return `
+    <tr class="session-row" id="row-${uid}" onclick="toggleRow('${uid}','${s.car_id}','${liftsTbodyId}')">
+      <td><span class="expand-icon" id="icon-${uid}">&#9658;</span></td>
+      <td>${s.car_id}</td>
+      <td>${s.operator||'—'}</td>
+      <td>${s.lift_count||0}</td>
+      <td>${fmt(s.total_kg)}</td>
+      <td>${fmt(s.target_kg)}</td>
+      ${colspan === 9 ? '<td>' + fmt(s.max_kg) + '</td>' : ''}
+      <td>${statusTag(s)}</td>
+      <td>${fmtDate(s.finished_at)}</td>
+    </tr>
+    <tr class="lift-row-container" id="lifts-${uid}">
+      <td colspan="${colspan}" style="padding:0">
+        <table class="lift-tbl">
+          <tbody id="${liftsTbodyId}"></tbody>
+        </table>
+      </td>
+    </tr>`;
+}
+
 async function loadToday(){
   try {
     const res = await fetch(API + '/api/sessions/today');
@@ -197,71 +304,84 @@ async function loadToday(){
 
     const tbody = document.getElementById('sessions-body');
     if(sessions.length === 0){
-      tbody.innerHTML = '<tr><td colspan="8" class="empty">No sessions today yet</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="9" class="empty">No sessions today yet</td></tr>';
     } else {
-      tbody.innerHTML = sessions.map(s => `
-        <tr>
-          <td>${s.car_id}</td>
-          <td>${s.operator||'—'}</td>
-          <td>${s.lift_count||0}</td>
-          <td>${fmt(s.total_kg)}</td>
-          <td>${fmt(s.target_kg)}</td>
-          <td>${fmt(s.max_kg)}</td>
-          <td>${statusTag(s)}</td>
-          <td>${fmtDate(s.finished_at)}</td>
-        </tr>`).join('');
+      tbody.innerHTML = sessions.map(s => sessionRow(s, 9)).join('');
     }
   } catch(e){
     document.getElementById('sessions-body').innerHTML =
-      '<tr><td colspan="8" class="empty">Error loading sessions</td></tr>';
+      '<tr><td colspan="9" class="empty">Error loading sessions</td></tr>';
   }
 }
 
-async function loadHistory(){
+async function loadHistory(params){
+  const query = params ? '?' + params : '';
   try {
-    const res = await fetch(API + '/api/sessions');
+    const res = await fetch(API + '/api/sessions' + query);
     const data = await res.json();
     const sessions = data.sessions || [];
     const tbody = document.getElementById('history-body');
-    if(sessions.length === 0){
-      tbody.innerHTML = '<tr><td colspan="7" class="empty">No sessions recorded yet</td></tr>';
+    const countEl = document.getElementById('results-count');
+
+    if(params){
+      countEl.style.display = 'block';
+      countEl.textContent = sessions.length + ' result' + (sessions.length === 1 ? '' : 's') + ' found';
     } else {
-      tbody.innerHTML = sessions.map(s => `
-        <tr>
-          <td>${s.car_id}</td>
-          <td>${s.operator||'—'}</td>
-          <td>${s.lift_count||0}</td>
-          <td>${fmt(s.total_kg)}</td>
-          <td>${fmt(s.target_kg)}</td>
-          <td>${statusTag(s)}</td>
-          <td>${fmtDate(s.finished_at)}</td>
-        </tr>`).join('');
+      countEl.style.display = 'none';
+    }
+
+    if(sessions.length === 0){
+      tbody.innerHTML = '<tr><td colspan="8" class="empty">No sessions found</td></tr>';
+    } else {
+      tbody.innerHTML = sessions.map(s => sessionRow(s, 8)).join('');
     }
   } catch(e){
     document.getElementById('history-body').innerHTML =
-      '<tr><td colspan="7" class="empty">Error loading history</td></tr>';
+      '<tr><td colspan="8" class="empty">Error loading history</td></tr>';
   }
 }
 
+function runSearch(){
+  const car = document.getElementById('search-car').value.trim();
+  const from = document.getElementById('search-from').value;
+  const to = document.getElementById('search-to').value;
+  const parts = [];
+  if(car) parts.push('car_id=' + encodeURIComponent(car));
+  if(from) parts.push('date_from=' + from);
+  if(to) parts.push('date_to=' + to);
+  loadHistory(parts.length ? parts.join('&') : null);
+}
+
+function clearSearch(){
+  document.getElementById('search-car').value = '';
+  document.getElementById('search-from').value = '';
+  document.getElementById('search-to').value = '';
+  document.getElementById('results-count').style.display = 'none';
+  loadHistory();
+}
+
 function exportCSV(){
-  fetch(API + '/api/sessions')
+  const car = document.getElementById('search-car').value.trim();
+  const from = document.getElementById('search-from').value;
+  const to = document.getElementById('search-to').value;
+  const parts = [];
+  if(car) parts.push('car_id=' + encodeURIComponent(car));
+  if(from) parts.push('date_from=' + from);
+  if(to) parts.push('date_to=' + to);
+  const query = parts.length ? '?' + parts.join('&') : '';
+
+  fetch(API + '/api/sessions' + query)
     .then(r => r.json())
     .then(data => {
       const sessions = data.sessions || [];
-      const rows = [
-        ['Date','Car ID','Operator','Lifts','Total kg','Target kg','Max kg','Status','Finished']
-      ];
+      const rows = [['Date','Car ID','Operator','Lifts','Total kg','Target kg','Max kg','Status']];
       sessions.forEach(s => {
         const pct = s.total_kg / s.max_kg * 100;
         const status = pct > 100 ? 'OVERLOAD' : pct > 95 ? 'NEAR LIMIT' : 'OK';
-        rows.push([
-          fmtDate(s.finished_at), s.car_id, s.operator||'',
-          s.lift_count||0, s.total_kg||0, s.target_kg||0,
-          s.max_kg||0, status, fmtDate(s.finished_at)
-        ]);
+        rows.push([fmtDate(s.finished_at),s.car_id,s.operator||'',s.lift_count||0,s.total_kg||0,s.target_kg||0,s.max_kg||0,status]);
       });
       const csv = rows.map(r => r.join(',')).join('\n');
-      const blob = new Blob([csv], {type:'text/csv'});
+      const blob = new Blob([csv],{type:'text/csv'});
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
       a.download = 'railload-pro-' + new Date().toISOString().slice(0,10) + '.csv';

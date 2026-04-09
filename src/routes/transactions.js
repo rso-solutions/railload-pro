@@ -2,27 +2,24 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 
-// POST /api/transaction
-// Called by the 1280 on every weight capture
 router.post('/transaction', async (req, res) => {
   const {
     transaction_id,
     car_id,
     operator,
     lift_number,
-    gross_kg,
-    net_kg,
+    weight_kg,
     timestamp
   } = req.body;
 
   try {
     const result = await pool.query(
       `INSERT INTO lifts 
-        (transaction_id, car_id, operator, lift_number, gross_kg, net_kg, captured_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+        (transaction_id, car_id, operator, lift_number, weight_kg, captured_at)
+       VALUES ($1, $2, $3, $4, $5, $6)
        ON CONFLICT (transaction_id) DO NOTHING
        RETURNING *`,
-      [transaction_id, car_id, operator, lift_number, gross_kg, net_kg, timestamp]
+      [transaction_id, car_id, operator, lift_number, weight_kg, timestamp]
     );
     res.json({ success: true, lift: result.rows[0] });
   } catch (err) {
@@ -31,8 +28,6 @@ router.post('/transaction', async (req, res) => {
   }
 });
 
-// POST /api/session/finish
-// Called by the 1280 when operator presses Finish Car
 router.post('/session/finish', async (req, res) => {
   const { car_id, operator, total_kg, target_kg, max_kg, lift_count, finished_at } = req.body;
 
@@ -51,13 +46,28 @@ router.post('/session/finish', async (req, res) => {
   }
 });
 
-// GET /api/sessions
-// Web console — load all sessions
 router.get('/sessions', async (req, res) => {
+  const { car_id, date_from, date_to } = req.query;
+  let query = 'SELECT * FROM sessions WHERE 1=1';
+  const params = [];
+
+  if (car_id) {
+    params.push('%' + car_id.toUpperCase() + '%');
+    query += ` AND UPPER(car_id) LIKE $${params.length}`;
+  }
+  if (date_from) {
+    params.push(date_from);
+    query += ` AND finished_at >= $${params.length}`;
+  }
+  if (date_to) {
+    params.push(date_to + ' 23:59:59');
+    query += ` AND finished_at <= $${params.length}`;
+  }
+
+  query += ' ORDER BY finished_at DESC LIMIT 200';
+
   try {
-    const result = await pool.query(
-      `SELECT * FROM sessions ORDER BY finished_at DESC LIMIT 100`
-    );
+    const result = await pool.query(query, params);
     res.json({ success: true, sessions: result.rows });
   } catch (err) {
     console.error(err);
@@ -65,8 +75,6 @@ router.get('/sessions', async (req, res) => {
   }
 });
 
-// GET /api/sessions/today
-// Web console — today's sessions only
 router.get('/sessions/today', async (req, res) => {
   try {
     const result = await pool.query(
@@ -81,8 +89,6 @@ router.get('/sessions/today', async (req, res) => {
   }
 });
 
-// GET /api/lifts/:car_id
-// Web console — all lifts for a specific car
 router.get('/lifts/:car_id', async (req, res) => {
   const { car_id } = req.params;
   try {

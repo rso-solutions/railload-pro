@@ -47,28 +47,53 @@ router.post('/session/finish', async (req, res) => {
 });
 
 router.get('/sessions', async (req, res) => {
-  const { car_id, date_from, date_to } = req.query;
-  let query = 'SELECT * FROM sessions WHERE 1=1';
+  const { car_id, date_from, date_to, limit = 50, offset = 0 } = req.query;
+
+  // Build the base query with optional filters
+  let countQuery = 'SELECT COUNT(*) FROM sessions WHERE 1=1';
+  let dataQuery = 'SELECT * FROM sessions WHERE 1=1';
   const params = [];
 
   if (car_id) {
     params.push('%' + car_id.toUpperCase() + '%');
-    query += ` AND UPPER(car_id) LIKE $${params.length}`;
+    const clause = ` AND UPPER(car_id) LIKE $${params.length}`;
+    countQuery += clause;
+    dataQuery += clause;
   }
   if (date_from) {
     params.push(date_from);
-    query += ` AND finished_at >= $${params.length}`;
+    const clause = ` AND finished_at >= $${params.length}`;
+    countQuery += clause;
+    dataQuery += clause;
   }
   if (date_to) {
     params.push(date_to + ' 23:59:59');
-    query += ` AND finished_at <= $${params.length}`;
+    const clause = ` AND finished_at <= $${params.length}`;
+    countQuery += clause;
+    dataQuery += clause;
   }
 
-  query += ' ORDER BY finished_at DESC LIMIT 200';
+  // Add ordering and pagination to the data query
+  const limitVal = Math.min(parseInt(limit) || 50, 500);
+  const offsetVal = parseInt(offset) || 0;
+  params.push(limitVal);
+  dataQuery += ` ORDER BY finished_at DESC LIMIT $${params.length}`;
+  params.push(offsetVal);
+  dataQuery += ` OFFSET $${params.length}`;
 
   try {
-    const result = await pool.query(query, params);
-    res.json({ success: true, sessions: result.rows });
+    // Run both queries — one for the data, one for the total count
+    const [countResult, dataResult] = await Promise.all([
+      pool.query(countQuery, params.slice(0, params.length - 2)),
+      pool.query(dataQuery, params)
+    ]);
+    res.json({
+      success: true,
+      sessions: dataResult.rows,
+      total: parseInt(countResult.rows[0].count),
+      limit: limitVal,
+      offset: offsetVal
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, error: err.message });

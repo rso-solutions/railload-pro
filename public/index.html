@@ -194,6 +194,22 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
             <tr><td colspan="8" class="empty">Loading history...</td></tr>
           </tbody>
         </table>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-top:1px solid var(--border);background:var(--bg2);flex-wrap:wrap;gap:8px">
+  <div style="display:flex;align-items:center;gap:8px">
+    <span style="font-size:12px;color:var(--muted);font-family:var(--mono)">Per page:</span>
+    <select id="per-page" onchange="changeLimit()" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);font-size:12px;font-family:var(--mono);padding:4px 8px;border-radius:4px;outline:none">
+      <option value="25">25</option>
+      <option value="50" selected>50</option>
+      <option value="100">100</option>
+    </select>
+    <span style="font-size:12px;color:var(--muted);font-family:var(--mono)" id="page-info"></span>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span style="font-size:12px;color:var(--muted);font-family:var(--mono)" id="page-num"></span>
+    <button id="btn-prev" onclick="prevPage()" style="background:var(--bg3);border:1px solid var(--border);color:var(--muted);font-size:12px;font-family:var(--mono);padding:4px 12px;border-radius:4px;cursor:pointer" disabled>&#8592; Prev</button>
+    <button id="btn-next" onclick="nextPage()" style="background:var(--bg3);border:1px solid var(--border);color:var(--muted);font-size:12px;font-family:var(--mono);padding:4px 12px;border-radius:4px;cursor:pointer">Next &#8594;</button>
+  </div>
+</div>
       </div>
     </div>
   </div>
@@ -339,28 +355,65 @@ async function loadToday(){
   }
 }
 
-async function loadHistory(params){
-  const query = params ? '?' + params : '';
+// Pagination state for the history table
+let currentPage = 0;
+let currentLimit = 50;
+let currentParams = null;
+let totalRecords = 0;
+
+async function loadHistory(params, page = 0, limit = currentLimit){
+  currentParams = params;
+  currentPage = page;
+  currentLimit = limit;
+  const offset = page * limit;
+  const query = new URLSearchParams();
+  if(params) params.split('&').forEach(p => { const [k,v] = p.split('='); query.set(k, decodeURIComponent(v)); });
+  query.set('limit', limit);
+  query.set('offset', offset);
+
   try {
-    const res = await fetch(API + '/api/sessions' + query);
+    const res = await fetch(API + '/api/sessions?' + query.toString());
     const data = await res.json();
     const sessions = data.sessions || [];
+    totalRecords = data.total || 0;
     const tbody = document.getElementById('history-body');
     const countEl = document.getElementById('results-count');
+
     if(params){
       countEl.style.display = 'block';
-      countEl.textContent = sessions.length + ' result' + (sessions.length === 1 ? '' : 's') + ' found';
+      countEl.textContent = totalRecords + ' result' + (totalRecords === 1 ? '' : 's') + ' found';
     } else {
       countEl.style.display = 'none';
     }
+
     if(sessions.length === 0){
       tbody.innerHTML = '<tr><td colspan="8" class="empty">No sessions found</td></tr>';
     } else {
       tbody.innerHTML = sessions.map(s => sessionRow(s, 8)).join('');
     }
+
+    updatePagination();
   } catch(e){
     document.getElementById('history-body').innerHTML = '<tr><td colspan="8" class="empty">Error loading history</td></tr>';
   }
+}
+
+function updatePagination(){
+  const totalPages = Math.ceil(totalRecords / currentLimit);
+  const start = totalRecords === 0 ? 0 : currentPage * currentLimit + 1;
+  const end = Math.min((currentPage + 1) * currentLimit, totalRecords);
+  document.getElementById('page-info').textContent =
+    totalRecords === 0 ? 'No records' : `${start}–${end} of ${totalRecords}`;
+  document.getElementById('btn-prev').disabled = currentPage === 0;
+  document.getElementById('btn-next').disabled = currentPage >= totalPages - 1;
+  document.getElementById('page-num').textContent = `Page ${currentPage + 1} of ${Math.max(totalPages, 1)}`;
+}
+
+function prevPage(){ if(currentPage > 0) loadHistory(currentParams, currentPage - 1, currentLimit); }
+function nextPage(){ loadHistory(currentParams, currentPage + 1, currentLimit); }
+function changeLimit(){
+  currentLimit = parseInt(document.getElementById('per-page').value);
+  loadHistory(currentParams, 0, currentLimit);
 }
 
 function runSearch(){

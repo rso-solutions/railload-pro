@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RailLoad Pro — User Management</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d1117;--bg2:#161b22;--bg3:#21262d;--border:#30363d;
+  --text:#e6edf3;--muted:#8b949e;--accent:#58a6ff;--green:#3fb950;
+  --amber:#d29922;--red:#f85149;
+  --font:'Barlow',sans-serif;--mono:'IBM Plex Mono',monospace;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:22px;min-height:100vh}
+.shell{display:grid;grid-template-columns:300px 1fr;min-height:100vh}
+.sidebar{background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column}
+.sidebar-top{padding:26px;border-bottom:1px solid var(--border)}
+.logo{font-size:26px;font-weight:700;color:var(--text);letter-spacing:.04em;font-family:var(--mono)}
+.logo span{color:var(--accent)}
+.site-tag{font-size:17px;color:var(--muted);margin-top:5px;font-family:var(--mono)}
+.nav{padding:18px 12px;flex:1}
+.nav-label{font-size:16px;color:var(--muted);letter-spacing:.08em;font-family:var(--mono);padding:7px 14px 12px;text-transform:uppercase}
+.nav-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:8px;font-size:20px;color:var(--muted);cursor:pointer;margin-bottom:4px;text-decoration:none}
+.nav-item:hover{background:var(--bg3);color:var(--text)}
+.nav-item.active{background:rgba(88,166,255,.1);color:var(--accent)}
+.nav-bottom{padding:16px 12px;border-top:1px solid var(--border)}
+.main{display:flex;flex-direction:column}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:22px 28px;border-bottom:1px solid var(--border);background:var(--bg2)}
+.page-title{font-size:24px;font-weight:600}
+.user-info{font-size:18px;color:var(--muted);font-family:var(--mono);display:flex;align-items:center;gap:16px}
+.logout-btn{background:transparent;border:1px solid var(--border);color:var(--muted);font-size:17px;font-family:var(--mono);padding:7px 16px;border-radius:6px;cursor:pointer}
+.logout-btn:hover{color:var(--red);border-color:var(--red)}
+.content{padding:28px;display:flex;flex-direction:column;gap:22px}
+.panel{background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.panel-head{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--border)}
+.panel-title{font-size:20px;font-weight:500;font-family:var(--mono)}
+.add-btn{background:var(--accent);border:none;color:#0d1117;font-size:17px;font-family:var(--mono);font-weight:700;padding:10px 22px;border-radius:6px;cursor:pointer}
+.add-btn:hover{opacity:.85}
+.tbl{width:100%;border-collapse:collapse;font-size:18px}
+.tbl th{font-size:16px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:.06em;padding:14px 24px;border-bottom:1px solid var(--border);text-align:left;font-weight:400}
+.tbl td{padding:16px 24px;border-bottom:1px solid var(--border);font-family:var(--mono)}
+.tbl tr:last-child td{border-bottom:none}
+.role-badge{display:inline-block;font-size:16px;font-family:var(--mono);padding:4px 12px;border-radius:6px;font-weight:500}
+.role-admin{background:rgba(88,166,255,.15);color:var(--accent);border:1px solid rgba(88,166,255,.25)}
+.role-viewer{background:rgba(139,148,158,.15);color:var(--muted);border:1px solid rgba(139,148,158,.25)}
+.action-btn{background:transparent;border:1px solid var(--border);color:var(--muted);font-size:16px;font-family:var(--mono);padding:6px 14px;border-radius:6px;cursor:pointer;margin-right:8px}
+.action-btn:hover{color:var(--text);border-color:var(--accent)}
+.action-btn.danger:hover{color:var(--red);border-color:var(--red)}
+.empty{padding:36px 24px;text-align:center;color:var(--muted);font-size:19px;font-family:var(--mono)}
+.modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;align-items:center;justify-content:center}
+.modal-backdrop.open{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:40px;width:100%;max-width:500px}
+.modal-title{font-size:22px;font-weight:600;font-family:var(--mono);margin-bottom:28px}
+.field{margin-bottom:22px}
+.field label{display:block;font-size:17px;color:var(--muted);margin-bottom:8px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.06em}
+.field input,.field select{width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);font-size:19px;font-family:var(--mono);padding:12px 15px;border-radius:7px;outline:none}
+.field input:focus,.field select:focus{border-color:var(--accent)}
+.field select option{background:var(--bg3)}
+.modal-actions{display:flex;gap:12px;margin-top:28px}
+.modal-save{flex:1;background:var(--accent);border:none;color:#0d1117;font-size:18px;font-family:var(--mono);font-weight:700;padding:13px;border-radius:7px;cursor:pointer}
+.modal-save:hover{opacity:.85}
+.modal-cancel{flex:1;background:var(--bg3);border:1px solid var(--border);color:var(--muted);font-size:18px;font-family:var(--mono);padding:13px;border-radius:7px;cursor:pointer}
+.modal-cancel:hover{color:var(--text)}
+.msg{font-size:17px;text-align:center;margin-top:14px;font-family:var(--mono);min-height:24px}
+.msg.ok{color:var(--green)}
+.msg.err{color:var(--red)}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="sidebar">
+    <div class="sidebar-top">
+      <div class="logo">Rail<span>Load</span> Pro</div>
+      <div class="site-tag">RSO Solutions</div>
+    </div>
+    <div class="nav">
+      <div class="nav-label">Monitor</div>
+      <a class="nav-item" href="/">Dashboard</a>
+      <div class="nav-label" style="margin-top:12px">Admin</div>
+      <a class="nav-item active" href="/admin.html">User management</a>
+    </div>
+    <div class="nav-bottom">
+      <div class="nav-item" onclick="logout()" style="color:var(--red)">Sign out</div>
+    </div>
+  </div>
+  <div class="main">
+    <div class="topbar">
+      <div class="page-title">User management</div>
+      <div class="user-info">
+        <span id="current-user"></span>
+        <button class="logout-btn" onclick="logout()">Sign out</button>
+      </div>
+    </div>
+    <div class="content">
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">System users</span>
+          <button class="add-btn" onclick="openAddModal()">+ Add user</button>
+        </div>
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th>Username</th>
+              <th>Role</th>
+              <th>Created</th>
+              <th>Last login</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="users-body">
+            <tr><td colspan="5" class="empty">Loading users...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="add-modal">
+  <div class="modal">
+    <div class="modal-title">Add new user</div>
+    <div class="field">
+      <label>Username</label>
+      <input type="text" id="new-username" placeholder="e.g. jkowalski">
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="new-password" placeholder="Minimum 8 characters">
+    </div>
+    <div class="field">
+      <label>Role</label>
+      <select id="new-role">
+        <option value="viewer">Viewer — dashboard and export only</option>
+        <option value="admin">Admin — full access plus user management</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeModal('add-modal')">Cancel</button>
+      <button class="modal-save" onclick="addUser()">Create user</button>
+    </div>
+    <div class="msg" id="add-msg"></div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="pw-modal">
+  <div class="modal">
+    <div class="modal-title">Change password</div>
+    <div class="field">
+      <label>Username</label>
+      <input type="text" id="pw-username" readonly style="opacity:.5">
+    </div>
+    <div class="field">
+      <label>New password</label>
+      <input type="password" id="pw-new" placeholder="Minimum 8 characters">
+    </div>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeModal('pw-modal')">Cancel</button>
+      <button class="modal-save" onclick="changePassword()">Save password</button>
+    </div>
+    <div class="msg" id="pw-msg"></div>
+  </div>
+</div>
+
+<script>
+let editingUserId = null;
+
+function fmtDate(ts) {
+  if (!ts) return 'Never';
+  return new Date(ts).toLocaleDateString('en-CA') + ' ' + new Date(ts).toTimeString().slice(0,5);
+}
+
+async function checkAuth() {
+  const res = await fetch('/auth/me');
+  const data = await res.json();
+  if (!data.authenticated) { window.location.href = '/login.html'; return; }
+  if (data.user.role !== 'admin') { window.location.href = '/'; return; }
+  document.getElementById('current-user').textContent = data.user.username + ' (admin)';
+}
+
+async function loadUsers() {
+  try {
+    const res = await fetch('/admin/users');
+    const data = await res.json();
+    const tbody = document.getElementById('users-body');
+    if (!data.users || data.users.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" class="empty">No users found</td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.users.map(u => `
+      <tr>
+        <td>${u.username}</td>
+        <td><span class="role-badge role-${u.role}">${u.role}</span></td>
+        <td>${fmtDate(u.created_at)}</td>
+        <td>${fmtDate(u.last_login)}</td>
+        <td>
+          <button class="action-btn" onclick="openPwModal(${u.id},'${u.username}')">Change password</button>
+          <button class="action-btn danger" onclick="deleteUser(${u.id},'${u.username}')">Delete</button>
+        </td>
+      </tr>`).join('');
+  } catch(e) {
+    document.getElementById('users-body').innerHTML = '<tr><td colspan="5" class="empty">Error loading users</td></tr>';
+  }
+}
+
+function openAddModal() {
+  document.getElementById('new-username').value = '';
+  document.getElementById('new-password').value = '';
+  document.getElementById('new-role').value = 'viewer';
+  document.getElementById('add-msg').textContent = '';
+  document.getElementById('add-modal').classList.add('open');
+}
+
+function openPwModal(id, username) {
+  editingUserId = id;
+  document.getElementById('pw-username').value = username;
+  document.getElementById('pw-new').value = '';
+  document.getElementById('pw-msg').textContent = '';
+  document.getElementById('pw-modal').classList.add('open');
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+async function addUser() {
+  const username = document.getElementById('new-username').value.trim();
+  const password = document.getElementById('new-password').value;
+  const role = document.getElementById('new-role').value;
+  const msgEl = document.getElementById('add-msg');
+  if (!username || !password) { msgEl.className='msg err'; msgEl.textContent='Username and password are required'; return; }
+  if (password.length < 8) { msgEl.className='msg err'; msgEl.textContent='Password must be at least 8 characters'; return; }
+  try {
+    const res = await fetch('/admin/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password, role })
+    });
+    const data = await res.json();
+    if (data.success) {
+      msgEl.className='msg ok'; msgEl.textContent='User created successfully';
+      setTimeout(() => { closeModal('add-modal'); loadUsers(); }, 1000);
+    } else {
+      msgEl.className='msg err'; msgEl.textContent=data.error||'Error creating user';
+    }
+  } catch(e) { msgEl.className='msg err'; msgEl.textContent='Connection error'; }
+}
+
+async function changePassword() {
+  const password = document.getElementById('pw-new').value;
+  const msgEl = document.getElementById('pw-msg');
+  if (!password || password.length < 8) { msgEl.className='msg err'; msgEl.textContent='Password must be at least 8 characters'; return; }
+  try {
+    const res = await fetch('/admin/users/' + editingUserId + '/password', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password })
+    });
+    const data = await res.json();
+    if (data.success) {
+      msgEl.className='msg ok'; msgEl.textContent='Password updated';
+      setTimeout(() => closeModal('pw-modal'), 1000);
+    } else {
+      msgEl.className='msg err'; msgEl.textContent=data.error||'Error updating password';
+    }
+  } catch(e) { msgEl.className='msg err'; msgEl.textContent='Connection error'; }
+}
+
+async function deleteUser(id, username) {
+  if (!confirm('Delete user "' + username + '"? This cannot be undone.')) return;
+  try {
+    const res = await fetch('/admin/users/' + id, { method: 'DELETE' });
+    const data = await res.json();
+    if (data.success) { loadUsers(); } else { alert(data.error||'Error deleting user'); }
+  } catch(e) { alert('Connection error'); }
+}
+
+async function logout() {
+  await fetch('/auth/logout', { method: 'POST' });
+  window.location.href = '/login.html';
+}
+
+checkAuth();
+loadUsers();
+</script>
+</body>
+</html>

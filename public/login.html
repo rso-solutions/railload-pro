@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RailLoad Pro — Login</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d1117;--bg2:#161b22;--bg3:#21262d;--border:#30363d;
+  --text:#e6edf3;--muted:#8b949e;--accent:#58a6ff;--green:#3fb950;--red:#f85149;
+  --font:'Barlow',sans-serif;--mono:'IBM Plex Mono',monospace;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;display:flex;align-items:center;justify-content:center}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:62px;width:100%;max-width:540px}
+.logo{font-size:41px;font-weight:700;font-family:var(--mono);margin-bottom:8px;text-align:center}
+.logo span{color:var(--accent)}
+.tagline{font-size:17px;color:var(--muted);text-align:center;letter-spacing:.08em;margin-bottom:48px;font-family:var(--mono)}
+.field{margin-bottom:24px}
+.field label{display:block;font-size:18px;color:var(--muted);margin-bottom:9px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.06em}
+.field input{width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);font-size:22px;font-family:var(--mono);padding:15px 18px;border-radius:8px;outline:none}
+.field input:focus{border-color:var(--accent)}
+.btn{width:100%;background:var(--accent);border:none;color:#0d1117;font-size:22px;font-family:var(--mono);font-weight:700;padding:17px;border-radius:8px;cursor:pointer;margin-top:12px;letter-spacing:.04em}
+.btn:hover{opacity:.88}
+.error{font-size:17px;color:var(--red);text-align:center;margin-top:16px;font-family:var(--mono);min-height:24px}
+.powered{font-size:16px;color:var(--muted);text-align:center;margin-top:32px;font-family:var(--mono)}
+.powered span{color:#4a7aaa}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">Rail<span>Load</span> Pro</div>
+  <div class="tagline">RAILCAR LOADING MANAGEMENT</div>
+  <div class="field">
+    <label>Username</label>
+    <input type="text" id="username" placeholder="Enter username" autocomplete="username">
+  </div>
+  <div class="field">
+    <label>Password</label>
+    <input type="password" id="password" placeholder="Enter password" autocomplete="current-password">
+  </div>
+  <button class="btn" onclick="login()">SIGN IN</button>
+  <div class="error" id="error"></div>
+  <div class="powered">Powered by <span>RSO Solutions</span></div>
+</div>
+<script>
+document.getElementById('password').addEventListener('keydown', e => {
+  if (e.key === 'Enter') login();
+});
+async function login() {
+  const username = document.getElementById('username').value.trim();
+  const password = document.getElementById('password').value;
+  const errorEl = document.getElementById('error');
+  errorEl.textContent = '';
+  if (!username || !password) { errorEl.textContent = 'Please enter username and password'; return; }
+  try {
+    const res = await fetch('/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    const data = await res.json();
+    if (data.success) { window.location.href = '/'; }
+    else { errorEl.textContent = data.error || 'Invalid credentials'; }
+  } catch(e) { errorEl.textContent = 'Connection error — please try again'; }
+}
+</script>
+</body>
+</html>

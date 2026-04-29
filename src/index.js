@@ -30,9 +30,18 @@ app.use(session({
   cookie: { maxAge: 24 * 60 * 60 * 1000 } // Sessions expire after 24 hours
 }));
 
-// These API routes are used by the 1280 indicator — no login required
-app.use('/api/transaction', transactionRoutes);
-app.use('/api/session', transactionRoutes);
+// API key middleware — used for ingest endpoints from the Teltonika/1280
+function requireApiKey(req, res, next) {
+  const provided = req.get('X-API-Key');
+  if (!process.env.RAILLOAD_API_KEY || provided !== process.env.RAILLOAD_API_KEY) {
+    return res.status(401).json({ success: false, error: 'Invalid API key' });
+  }
+  next();
+}
+
+// Ingest endpoints from the 1280 indicator — protected by API key, not session
+app.use('/api/transaction', requireApiKey, transactionRoutes);
+app.use('/api/session', requireApiKey, transactionRoutes);
 
 // Auth routes handle login, logout, and session checking
 app.use('/auth', authRoutes);
@@ -56,9 +65,6 @@ function requireAuth(req, res, next) {
 // Apply auth check then serve the public folder (dashboard and login page)
 app.use(requireAuth);
 app.use(express.static('public'));
-
-// All other API routes require authentication
-app.use('/api', requireAuth, transactionRoutes);
 
 app.listen(PORT, () => {
   console.log(`RailLoad Pro API running on port ${PORT}`);

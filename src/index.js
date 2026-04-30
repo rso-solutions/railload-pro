@@ -10,6 +10,7 @@ require('dotenv').config();
 
 // Import route handlers
 const transactionRoutes = require('./routes/transactions');
+const queryRoutes = require('./routes/queries');
 const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
 
@@ -31,7 +32,6 @@ app.use(session({
 }));
 
 function requireApiKey(req, res, next) {
-  console.log('[requireApiKey] hit:', req.method, req.path, 'has key:', !!req.get('X-API-Key'));
   const provided = req.get('X-API-Key');
   if (!process.env.RAILLOAD_API_KEY || provided !== process.env.RAILLOAD_API_KEY) {
     return res.status(401).json({ success: false, error: 'Invalid API key' });
@@ -40,8 +40,7 @@ function requireApiKey(req, res, next) {
 }
 
 // Ingest endpoints from the 1280 indicator — protected by API key, not session
-app.use('/api/transaction', requireApiKey, transactionRoutes);
-app.use('/api/session', requireApiKey, transactionRoutes);
+app.use('/api', requireApiKey, transactionRoutes);
 
 // Auth routes handle login, logout, and session checking
 app.use('/auth', authRoutes);
@@ -64,6 +63,10 @@ function requireAuth(req, res, next) {
 
 // Apply auth check then serve the public folder (dashboard and login page)
 app.use(requireAuth);
+
+// Read endpoints for the dashboard — protected by session auth
+app.use('/api', queryRoutes);
+
 app.use(express.static('public'));
 
 app.listen(PORT, () => {

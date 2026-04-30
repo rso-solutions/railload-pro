@@ -37,7 +37,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
 .logout-btn{background:transparent;border:1px solid var(--border);color:var(--muted);font-size:11px;font-family:var(--mono);padding:4px 11px;border-radius:4px;cursor:pointer}
 .logout-btn:hover{color:var(--red);border-color:var(--red)}
 .content{padding:20px;display:flex;flex-direction:column;gap:15px}
-.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:15px 17px}
 .stat-label{font-size:12px;color:var(--muted);font-family:var(--mono);margin-bottom:7px;text-transform:uppercase;letter-spacing:.05em}
 .stat-val{font-size:25px;font-weight:600;font-family:var(--mono);line-height:1}
@@ -76,6 +76,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
 .tag{display:inline-block;font-size:11px;font-family:var(--mono);padding:3px 8px;border-radius:4px;font-weight:500}
 .tag-ok{background:rgba(63,185,80,.15);color:var(--green);border:1px solid rgba(63,185,80,.25)}
 .tag-warn{background:rgba(210,153,34,.15);color:var(--amber);border:1px solid rgba(210,153,34,.25)}
+.tag-under{background:rgba(139,148,158,.15);color:var(--muted);border:1px solid rgba(139,148,158,.25)}
 .tag-over{background:rgba(248,81,73,.15);color:var(--red);border:1px solid rgba(248,81,73,.25)}
 .empty{padding:26px 18px;text-align:center;color:var(--muted);font-size:13px;font-family:var(--mono)}
 .export-btn{background:var(--bg3);border:1px solid var(--border);color:var(--muted);font-size:12px;font-family:var(--mono);padding:6px 13px;border-radius:4px;cursor:pointer}
@@ -132,11 +133,6 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
           <div class="stat-val" id="stat-lifts">—</div>
           <div class="stat-sub">across all cars</div>
         </div>
-        <div class="stat-card">
-          <div class="stat-label">Overload alerts</div>
-          <div class="stat-val" id="stat-alerts" style="color:var(--amber)">—</div>
-          <div class="stat-sub warn" id="stat-alerts-sub">checking...</div>
-        </div>
       </div>
 
       <div class="panel">
@@ -153,13 +149,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
               <th>Lifts</th>
               <th>Total (kg)</th>
               <th>Target (kg)</th>
-              <th>Max (kg)</th>
               <th>Status</th>
               <th>Finished</th>
             </tr>
           </thead>
           <tbody id="sessions-body">
-            <tr><td colspan="9" class="empty">Loading sessions...</td></tr>
+            <tr><td colspan="8" class="empty">Loading sessions...</td></tr>
           </tbody>
         </table>
       </div>
@@ -242,10 +237,15 @@ function tick(){
 tick();
 setInterval(tick, 1000);
 
+const OVER_TARGET_THRESHOLD_PCT = 3;
+
 function statusTag(session){
-  const pct = session.total_kg / session.max_kg * 100;
-  if(pct > 100) return '<span class="tag tag-over">OVERLOAD</span>';
-  if(pct > 95)  return '<span class="tag tag-warn">NEAR LIMIT</span>';
+  const target = parseFloat(session.target_kg) || 0;
+  const total  = parseFloat(session.total_kg) || 0;
+  if (target <= 0) return '<span class="tag tag-warn">NO TARGET</span>';
+  const pct = (total / target) * 100;
+  if (pct > 100 + OVER_TARGET_THRESHOLD_PCT) return '<span class="tag tag-over">OVER</span>';
+  if (pct < 100 - OVER_TARGET_THRESHOLD_PCT) return '<span class="tag tag-under">UNDER</span>';
   return '<span class="tag tag-ok">OK</span>';
 }
 
@@ -317,7 +317,6 @@ function sessionRow(s, colspan){
       <td>${s.lift_count||0}</td>
       <td>${fmt(s.total_kg)}</td>
       <td>${fmt(s.target_kg)}</td>
-      ${colspan === 9 ? '<td>' + fmt(s.max_kg) + '</td>' : ''}
       <td>${statusTag(s)}</td>
       <td>${fmtDate(s.finished_at)}</td>
     </tr>
@@ -341,17 +340,14 @@ async function loadToday(){
     document.getElementById('stat-total').textContent = (totalKg/1000).toFixed(1);
     const totalLifts = sessions.reduce((a,s) => a + parseInt(s.lift_count||0), 0);
     document.getElementById('stat-lifts').textContent = totalLifts;
-    const alerts = sessions.filter(s => parseFloat(s.total_kg) > parseFloat(s.max_kg)).length;
-    document.getElementById('stat-alerts').textContent = alerts;
-    document.getElementById('stat-alerts-sub').textContent = alerts === 0 ? 'None today' : alerts + ' overload(s)';
     const tbody = document.getElementById('sessions-body');
     if(sessions.length === 0){
-      tbody.innerHTML = '<tr><td colspan="9" class="empty">No sessions today yet</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" class="empty">No sessions today yet</td></tr>';
     } else {
-      tbody.innerHTML = sessions.map(s => sessionRow(s, 9)).join('');
+      tbody.innerHTML = sessions.map(s => sessionRow(s, 8)).join('');
     }
   } catch(e){
-    document.getElementById('sessions-body').innerHTML = '<tr><td colspan="9" class="empty">Error loading sessions</td></tr>';
+    document.getElementById('sessions-body').innerHTML = '<tr><td colspan="8" class="empty">Error loading sessions</td></tr>';
   }
 }
 
@@ -448,11 +444,19 @@ function exportCSV(){
     .then(r => r.json())
     .then(data => {
       const sessions = data.sessions || [];
-      const rows = [['Date','Car ID','Operator','Lifts','Total kg','Target kg','Max kg','Status']];
+      const rows = [['Date','Car ID','Operator','Lifts','Total kg','Target kg','Status']];
       sessions.forEach(s => {
-        const pct = s.total_kg / s.max_kg * 100;
-        const status = pct > 100 ? 'OVERLOAD' : pct > 95 ? 'NEAR LIMIT' : 'OK';
-        rows.push([fmtDate(s.finished_at),s.car_id,s.operator||'',s.lift_count||0,s.total_kg||0,s.target_kg||0,s.max_kg||0,status]);
+        const target = parseFloat(s.target_kg) || 0;
+        const total  = parseFloat(s.total_kg) || 0;
+        let status = 'OK';
+        if (target <= 0) {
+          status = 'NO TARGET';
+        } else {
+          const pct = (total / target) * 100;
+          if (pct > 100 + OVER_TARGET_THRESHOLD_PCT) status = 'OVER';
+          else if (pct < 100 - OVER_TARGET_THRESHOLD_PCT) status = 'UNDER';
+        }
+        rows.push([fmtDate(s.finished_at),s.car_id,s.operator||'',s.lift_count||0,s.total_kg||0,s.target_kg||0,status]);
       });
       const csv = rows.map(r => r.join(',')).join('\n');
       const blob = new Blob([csv],{type:'text/csv'});

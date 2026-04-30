@@ -18,6 +18,14 @@ const adminRoutes = require('./routes/admin');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// ---------------------------------------------------------------------------
+// Auto-migrate: ensure transaction_id column exists on sessions table.
+// Safe to run on every boot - IF NOT EXISTS makes it a no-op once added.
+// ---------------------------------------------------------------------------
+pool.query(`ALTER TABLE sessions ADD COLUMN IF NOT EXISTS transaction_id VARCHAR(50)`)
+  .then(() => console.log('[migrate] transaction_id column ready on sessions'))
+  .catch(err => console.error('[migrate] failed to add transaction_id:', err.message));
+
 // Allow cross-origin requests and parse JSON request bodies
 app.use(cors());
 app.use(express.json());
@@ -32,6 +40,7 @@ app.use(session({
   cookie: { maxAge: 24 * 60 * 60 * 1000 } // Sessions expire after 24 hours
 }));
 
+// API key middleware - used for ingest endpoints from the Teltonika/1280
 function requireApiKey(req, res, next) {
   const provided = req.get('X-API-Key');
   if (!process.env.RAILLOAD_API_KEY || provided !== process.env.RAILLOAD_API_KEY) {
@@ -40,14 +49,14 @@ function requireApiKey(req, res, next) {
   next();
 }
 
-// Specific ingest endpoints from the 1280 — protected by API key
+// Specific ingest endpoints from the 1280 - protected by API key, not session
 app.use('/api/transaction', requireApiKey, transactionRoutes);
 app.use('/api/session/finish', requireApiKey, sessionFinishRoutes);
 
 // Auth routes handle login, logout, and session checking
 app.use('/auth', authRoutes);
 
-// Admin routes handle user management — protected inside the router
+// Admin routes handle user management - protected inside the router
 app.use('/admin', adminRoutes);
 
 // Middleware that checks if the user is logged in before serving any page
@@ -63,10 +72,10 @@ function requireAuth(req, res, next) {
   next();
 }
 
-// Apply auth check then serve the public folder (dashboard and login page)
+// Apply auth check then mount the dashboard read endpoints and serve public files
 app.use(requireAuth);
 
-// Read endpoints for the dashboard — protected by session auth
+// Read endpoints for the dashboard - protected by session auth
 app.use('/api', queryRoutes);
 
 app.use(express.static('public'));

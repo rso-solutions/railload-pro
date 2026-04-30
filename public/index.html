@@ -144,6 +144,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
           <thead>
             <tr>
               <th style="width:24px"></th>
+              <th>Trans#</th>
               <th>Car ID</th>
               <th>Operator</th>
               <th>Lifts</th>
@@ -154,7 +155,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
             </tr>
           </thead>
           <tbody id="sessions-body">
-            <tr><td colspan="8" class="empty">Loading sessions...</td></tr>
+            <tr><td colspan="9" class="empty">Loading sessions...</td></tr>
           </tbody>
         </table>
       </div>
@@ -176,6 +177,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
           <thead>
             <tr>
               <th style="width:24px"></th>
+              <th>Trans#</th>
               <th>Car ID</th>
               <th>Operator</th>
               <th>Lifts</th>
@@ -186,7 +188,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
             </tr>
           </thead>
           <tbody id="history-body">
-            <tr><td colspan="8" class="empty">Loading history...</td></tr>
+            <tr><td colspan="9" class="empty">Loading history...</td></tr>
           </tbody>
         </table>
         <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-top:1px solid var(--border);background:var(--bg2);flex-wrap:wrap;gap:8px">
@@ -312,6 +314,7 @@ function sessionRow(s, colspan){
   return `
     <tr class="session-row" id="row-${uid}" onclick="toggleRow('${uid}','${s.car_id}','${liftsTbodyId}')">
       <td><span class="expand-icon" id="icon-${uid}">&#9658;</span></td>
+      <td style="color:var(--muted)">${s.transaction_id || '—'}</td>
       <td>${s.car_id}</td>
       <td>${s.operator||'—'}</td>
       <td>${s.lift_count||0}</td>
@@ -342,12 +345,12 @@ async function loadToday(){
     document.getElementById('stat-lifts').textContent = totalLifts;
     const tbody = document.getElementById('sessions-body');
     if(sessions.length === 0){
-      tbody.innerHTML = '<tr><td colspan="8" class="empty">No sessions today yet</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="9" class="empty">No sessions today yet</td></tr>';
     } else {
-      tbody.innerHTML = sessions.map(s => sessionRow(s, 8)).join('');
+      tbody.innerHTML = sessions.map(s => sessionRow(s, 9)).join('');
     }
   } catch(e){
-    document.getElementById('sessions-body').innerHTML = '<tr><td colspan="8" class="empty">Error loading sessions</td></tr>';
+    document.getElementById('sessions-body').innerHTML = '<tr><td colspan="9" class="empty">Error loading sessions</td></tr>';
   }
 }
 
@@ -383,14 +386,14 @@ async function loadHistory(params, page = 0, limit = currentLimit){
     }
 
     if(sessions.length === 0){
-      tbody.innerHTML = '<tr><td colspan="8" class="empty">No sessions found</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="9" class="empty">No sessions found</td></tr>';
     } else {
-      tbody.innerHTML = sessions.map(s => sessionRow(s, 8)).join('');
+      tbody.innerHTML = sessions.map(s => sessionRow(s, 9)).join('');
     }
 
     updatePagination();
   } catch(e){
-    document.getElementById('history-body').innerHTML = '<tr><td colspan="8" class="empty">Error loading history</td></tr>';
+    document.getElementById('history-body').innerHTML = '<tr><td colspan="9" class="empty">Error loading history</td></tr>';
   }
 }
 
@@ -444,7 +447,7 @@ function exportCSV(){
     .then(r => r.json())
     .then(data => {
       const sessions = data.sessions || [];
-      const rows = [['Date','Car ID','Operator','Lifts','Total kg','Target kg','Status']];
+      const rows = [['Date','Trans#','Car ID','Operator','Lifts','Total kg','Target kg','Status']];
       sessions.forEach(s => {
         const target = parseFloat(s.target_kg) || 0;
         const total  = parseFloat(s.total_kg) || 0;
@@ -456,7 +459,7 @@ function exportCSV(){
           if (pct > 100 + OVER_TARGET_THRESHOLD_PCT) status = 'OVER';
           else if (pct < 100 - OVER_TARGET_THRESHOLD_PCT) status = 'UNDER';
         }
-        rows.push([fmtDate(s.finished_at),s.car_id,s.operator||'',s.lift_count||0,s.total_kg||0,s.target_kg||0,status]);
+        rows.push([fmtDate(s.finished_at),s.transaction_id||'',s.car_id,s.operator||'',s.lift_count||0,s.total_kg||0,s.target_kg||0,status]);
       });
       const csv = rows.map(r => r.join(',')).join('\n');
       const blob = new Blob([csv],{type:'text/csv'});

@@ -1,6 +1,7 @@
 // Ingest router for /api/session/finish
 // Accepts a finish payload with optional embedded lifts array.
-// Inserts the session row and all lift rows in a single transaction.
+// Inserts the session row (including transaction_id) and all lift rows
+// in a single Postgres transaction.
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
@@ -21,13 +22,13 @@ router.post('/', async (req, res) => {
   try {
     await client.query('BEGIN');
 
-    // 1. Insert the session row
+    // 1. Insert the session row, including transaction_id so the dashboard can show it
     const sessionResult = await client.query(
       `INSERT INTO sessions
-        (car_id, operator, total_kg, target_kg, lift_count, status, finished_at)
-       VALUES ($1, $2, $3, $4, $5, 'completed', $6)
+        (transaction_id, car_id, operator, total_kg, target_kg, lift_count, status, finished_at)
+       VALUES ($1, $2, $3, $4, $5, $6, 'completed', $7)
        RETURNING *`,
-      [car_id, operator, total_kg, target_kg, lift_count, finished_at]
+      [transaction_id, car_id, operator, total_kg, target_kg, lift_count, finished_at]
     );
 
     // 2. Insert lift rows if provided

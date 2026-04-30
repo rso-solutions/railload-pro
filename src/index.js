@@ -30,8 +30,8 @@ app.use(session({
   cookie: { maxAge: 24 * 60 * 60 * 1000 } // Sessions expire after 24 hours
 }));
 
-// API key middleware — used for ingest endpoints from the Teltonika/1280
 function requireApiKey(req, res, next) {
+  console.log('[requireApiKey] hit:', req.method, req.path, 'has key:', !!req.get('X-API-Key'));
   const provided = req.get('X-API-Key');
   if (!process.env.RAILLOAD_API_KEY || provided !== process.env.RAILLOAD_API_KEY) {
     return res.status(401).json({ success: false, error: 'Invalid API key' });

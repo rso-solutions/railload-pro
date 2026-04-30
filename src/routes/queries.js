@@ -4,6 +4,9 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 
+// Timezone for "today" calculations. Override per deployment with env var.
+const SITE_TZ = process.env.SITE_TIMEZONE || 'America/Edmonton';
+
 router.get('/sessions', async (req, res) => {
   const { car_id, date_from, date_to, limit = 50, offset = 0 } = req.query;
 
@@ -55,12 +58,17 @@ router.get('/sessions', async (req, res) => {
   }
 });
 
+// "Today" means today in the site's local timezone — see SITE_TZ above.
+// finished_at is a TIMESTAMP (no timezone). We convert it to the site's
+// local time then compare to the current date in that timezone.
 router.get('/sessions/today', async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT * FROM sessions 
-       WHERE finished_at >= CURRENT_DATE 
-       ORDER BY finished_at DESC`
+      `SELECT * FROM sessions
+       WHERE (finished_at AT TIME ZONE 'UTC' AT TIME ZONE $1)::date
+             = (NOW() AT TIME ZONE $1)::date
+       ORDER BY finished_at DESC`,
+      [SITE_TZ]
     );
     res.json({ success: true, sessions: result.rows });
   } catch (err) {

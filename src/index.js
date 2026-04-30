@@ -10,6 +10,7 @@ require('dotenv').config();
 
 // Import route handlers
 const transactionRoutes = require('./routes/transactions');
+const sessionFinishRoutes = require('./routes/sessionFinish');
 const queryRoutes = require('./routes/queries');
 const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
@@ -39,8 +40,9 @@ function requireApiKey(req, res, next) {
   next();
 }
 
-// Ingest endpoints from the 1280 indicator — protected by API key, not session
-app.use('/api', requireApiKey, transactionRoutes);
+// Specific ingest endpoints from the 1280 — protected by API key
+app.use('/api/transaction', requireApiKey, transactionRoutes);
+app.use('/api/session/finish', requireApiKey, sessionFinishRoutes);
 
 // Auth routes handle login, logout, and session checking
 app.use('/auth', authRoutes);
